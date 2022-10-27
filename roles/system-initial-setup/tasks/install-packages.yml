@@ -1,0 +1,48 @@
+---
+# tasks file for system-initial-setup
+
+- name: DNF update the system
+  dnf:
+    name: '*'
+    state: latest
+  when: ansible_facts['os_family'] == 'RedHat' and ansible_facts  ['distribution_major_version'] >= '8'
+  tags:
+  - update-system
+
+- name: Install useful tools
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+  - jq
+  - tar
+  tags:
+  - tools
+
+- name: Install required libvirt packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+  - libvirt
+  - libvirt-client
+  - qemu-kvm
+  - mkisofs
+  - jq
+  - tar
+  tags:
+  - libvirt
+
+  # Is it required?
+  # - python3-devel
+  # ipmitool is not required anymore
+  # - ipmitool
+
+- name: Install required podman packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+  - podman  
+  tags:
+  - podman
