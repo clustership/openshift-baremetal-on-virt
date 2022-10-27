@@ -3,7 +3,10 @@
 
 - include_tasks: install-packages.yml
   tags:
-  - update-system
-  - tools
-  - libvirt
   - podman
+  - sushy-tools
+
+- include_tasks: configure.yml
+  tags:
+  - podman
+  - sushy-tools

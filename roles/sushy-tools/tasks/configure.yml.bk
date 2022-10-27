@@ -1,0 +1,51 @@
+---
+# tasks file for system-initial-setup
+
+- name: Create /etc/sushy directory
+  ansible.builtin.file:
+    path: /etc/sushy
+    state: directory
+    mode: '0755'
+  tags:
+  - sushy-tools
+
+- name: Create sushy-tools configuration file
+  ansible.builtin.copy:
+    dest: /etc/sushy/sushy-emulator.conf
+    content: |-
+      SUSHY_EMULATOR_LISTEN_IP = u'0.0.0.0'
+      SUSHY_EMULATOR_LISTEN_PORT = 8000
+      SUSHY_EMULATOR_SSL_CERT = None
+      SUSHY_EMULATOR_SSL_KEY = None
+      SUSHY_EMULATOR_OS_CLOUD = None
+      SUSHY_EMULATOR_LIBVIRT_URI = u'qemu:///system'
+      SUSHY_EMULATOR_IGNORE_BOOT_DEVICE = True
+      SUSHY_EMULATOR_BOOT_LOADER_MAP = {
+          u'UEFI': {
+              u'x86_64': u'/usr/share/OVMF/OVMF_CODE.secboot.fd'
+          },
+          u'Legacy': {
+              u'x86_64': None
+          }
+      }
+  tags:
+  - sushy-tools
+
+- name: Re-create a sushy-tools container
+    containers.podman.podman_container:
+      name: sushy-emulator
+      image: "{{ sushy_emulator_image }}"
+      state: started
+      detach: true
+      interactive: true
+      privileged: true
+      command: --config /etc/sushy/sushy-emulator.conf
+      exposed_ports:
+      - 8000
+      ports:
+      - 8000:8000
+      volumes:
+      - /etc/sushy:/etc/sushy
+      - /var/run/libvirt:/var/run/libvirt
+  tags:
+  - sushy-tools

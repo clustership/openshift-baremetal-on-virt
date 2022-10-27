@@ -1,0 +1,79 @@
+- name: Certificates generation block
+  tags:
+  - certs
+  block:
+  - name: Create /etc/sushy/certs directory
+    ansible.builtin.file:
+      path: /etc/sushy/certs
+      state: directory
+      mode: '0755'
+
+  - name: Create openssl.root-ca.conf
+    template:
+      dest: "{{ certs_dir }}/{{ item }}"
+      src: "{{ item }}.j2"
+    with_items:
+      - openssl.root-ca.conf
+      - openssl.certificate.conf
+
+  - name: Generate RootCA key
+    command: |
+      openssl genrsa -aes256 \
+        -passout pass:{{ root_ca_passphrase }} \
+        -out {{ certs_dir }}/ca.key \
+        2048
+    args:
+      creates: "{{ certs_dir }}/ca.key"
+
+  - name: Generate RootCA Cert
+    command: |
+      openssl req \
+        -config {{ certs_dir }}/openssl.root-ca.conf \
+        -new -x509 -days 7300 \
+        -key {{ certs_dir }}/ca.key \
+        -passin 'pass:{{ root_ca_passphrase }}' \
+        -sha256 \
+        -extensions v3_ca \
+        -batch \
+        -out {{ certs_dir }}/ca.crt
+    args:
+      creates:  "{{ certs_dir }}/ca.crt"
+
+  - name: Generate an OpenSSL private key with the default values (4096 bits, RSA)
+    community.crypto.openssl_privatekey:
+      path: "{{ certs_dir }}/{{ server }}.key"
+
+  - name: Generate an OpenSSL Certificate Signing Request
+    community.crypto.openssl_csr:
+      path: "{{ certs_dir }}/{{ server }}.csr"
+      privatekey_path: "{{ certs_dir }}/{{ server }}.key"
+      common_name: "{{ server_hostname }}"
+
+  - name: Create tls certificates
+    community.crypto.x509_certificate:
+      path: "{{ certs_dir }}/{{ server }}.crt"
+      privatekey_path: "{{ certs_dir }}/{{ server }}.key"
+      csr_path: "{{ certs_dir }}/{{ server }}.csr"
+      ownca_path: "{{ certs_dir }}/ca.crt"
+      ownca_privatekey_path: "{{ certs_dir }}/ca.key"
+      ownca_privatekey_passphrase: "{{ root_ca_passphrase }}"
+      provider: ownca
+
+  - name: Install root ca
+    copy:
+      src: "{{ certs_dir }}/ca.crt"
+      dest: /etc/pki/ca-trust/source/anchors/
+
+  - name: Update ca trust
+    shell: |
+      update-ca-trust enable;
+      update-ca-trust extract;
+
+  - name: Change crt and key owner
+    ansible.builtin.file:
+      path: "{{ certs_dir }}/{{ item }}"
+      owner: "{{ server_user }}"
+      mode: '0600'
+    loop:
+    - "{{ server }}.crt"
+    - "{{ server }}.key"

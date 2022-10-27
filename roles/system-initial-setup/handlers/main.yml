@@ -1,2 +1,6 @@
 ---
 # handlers file for system-initial-setup
+- name: Start or restart libvirtd
+  ansible.builtin.service:
+    name: libvirtd
+    state: restarted

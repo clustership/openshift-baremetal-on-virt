@@ -30,6 +30,8 @@
   - mkisofs
   - jq
   - tar
+  notify:
+  - Start or restart libvirtd
   tags:
   - libvirt
 
@@ -37,6 +39,16 @@
   # - python3-devel
   # ipmitool is not required anymore
   # - ipmitool
+
+- name: Enable libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd
+    enabled: yes
+    masked: no
+  notify:
+  - Start or restart libvirtd
+  tags:
+  - libvirt
 
 - name: Install required podman packages
   dnf:

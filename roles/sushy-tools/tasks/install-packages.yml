@@ -1,0 +1,11 @@
+---
+# tasks file for system-initial-setup
+
+- name: Install required podman packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+  - podman  
+  tags:
+  - podman
