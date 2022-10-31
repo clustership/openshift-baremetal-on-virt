@@ -57,5 +57,9 @@
     volumes:
     - /etc/sushy:/etc/sushy
     - /var/run/libvirt:/var/run/libvirt
+    generate_systemd:
+      path: /etc/systemd/system
+      restart_policy: always
+      names: true
   tags:
   - sushy-tools

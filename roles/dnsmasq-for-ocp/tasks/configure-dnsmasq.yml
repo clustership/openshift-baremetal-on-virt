@@ -1,0 +1,35 @@
+---
+# tasks file for system-initial-setup
+
+- name: Configure dnsmasq for OCP
+  template:
+    dest: /etc/dnsmasq.d/ocp4.conf
+    src: dnsmasq.conf.j2
+  notify:
+  - Start dnsmasq
+  tags:
+  - dnsmasq
+
+- name: Touch config files
+  copy:
+    content: ""
+    dest: "{{ item }}"
+    force: no
+    group: root
+    owner: root
+    mode: 0644
+  loop:
+  - /var/lib/dnsmasq/ocp4.hostsfile
+  - /var/lib/dnsmasq/ocp4.addnhosts
+  tags:
+  - dnsmasq
+
+- name: Open dhcp and dns n firewall
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    zone: "{{ baremetal_zone }}"
+    permanent: yes
+    state: enabled
+  loop:
+  - dhcp
+  - dns

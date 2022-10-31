@@ -1,0 +1,12 @@
+---
+# tasks file for system-initial-setup
+
+- name: Install dnsmasq
+  dnf:
+    name: "dnsmasq"
+    state: present
+  notify:
+  - Start dnsmasq
+  tags:
+  - dnsmasq
+

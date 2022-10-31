@@ -1,0 +1,10 @@
+---
+# tasks file for system-initial-setup
+
+- include_tasks: install-packages.yml
+  tags:
+  - dnsmasq
+
+- include_tasks: configure-dnsmasq.yml
+  tags:
+  - dnsmasq

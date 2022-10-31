@@ -1,0 +1,3 @@
+---
+# defaults file for dnsmasq-for-ocp
+baremetal_zone: public

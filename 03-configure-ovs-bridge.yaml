@@ -1,0 +1,65 @@
+#!/usr/bin/env ansible-playbook
+---
+# If you like to play: ./ansible/create.yml --skip-tags public_dns,letsencrypt
+- hosts: localhost
+  connection: local
+  # gather_facts true because we need the public ip address
+  gather_facts: true
+  become: true
+  # vars_files:
+  # - ../cluster.yml
+  vars:
+    primary_if: eno1
+    ovs_bridge: br-ext
+
+  tasks:
+  - name: Get address
+    set_fact:
+      # primary_ipv4_address: "{{ lookup('vars', 'ansible_' + primary_if).ipv4.address }}"
+      primary_ipv4: "{{ lookup('vars', 'ansible_' + primary_if).ipv4 }}"
+      default_gw: "{{ ansible_default_ipv4.gateway }}"
+
+  - debug: var=primary_ipv4_address
+  - debug: var=default_gw
+
+  - name: Enable a RHSM repository for OVS
+    community.general.packaging.os.rhsm_repository:
+      name: fast-datapath-for-rhel-8-x86_64-rpms
+
+  - name: Install OVS and NetworkManager-ovs
+    dnf:
+      name: "{{ item }}"
+      state: latest
+    loop:
+    - openvswitch2.17
+    - libibverbs
+    - NetworkManager-ovs
+
+  - name: Start openvswitch
+    ansible.builtin.systemd:
+      state: started
+      enabled: yes
+      name: openvswitch
+
+  - name: Restart NetworkManager
+    ansible.builtin.systemd:
+      state: restarted
+      daemon_reload: yes
+      name: NetworkManager.service
+
+  - name: Create script name
+    copy:
+      dest: "/tmp/setup_{{ ovs_bridge }}.sh"
+      content: |-
+        nmcli c add type ovs-bridge conn.interface {{ ovs_bridge }} con-name {{ ovs_bridge }}
+        nmcli c add type ovs-port conn.interface {{ ovs_bridge }} master {{ ovs_bridge }} con-name ovs-port-{{ ovs_bridge }}
+        nmcli c add type ovs-interface slave-type ovs-port conn.interface {{ ovs_bridge }} master ovs-port-{{ ovs_bridge }} con-name ovs-if-{{ ovs_bridge }} \
+              ipv4.method manual ipv4.addresses {{ primary_ipv4.address }}/{{ primary_ipv4.netmask }} ipv4.gateway {{ default_gw }} \
+              ipv4.dns 8.8.8.8,1.1.1.1
+        
+        nmcli c add type ovs-port conn.interface {{ primary_if }} master {{ ovs_bridge }} con-name ovs-port-{{ primary_if }}
+        nmcli c add type ethernet conn.interface {{ primary_if }} master ovs-port-{{ primary_if }} con-name ovs-if-{{ primary_if }}
+        
+        nmcli con up ovs-if-{{ primary_if }}
+          
+        

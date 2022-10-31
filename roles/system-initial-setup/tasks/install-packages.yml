@@ -26,10 +26,13 @@
   loop:
   - libvirt
   - libvirt-client
+  - virt-install
   - qemu-kvm
   - mkisofs
   - jq
   - tar
+  - bind-utils
+  - nmstate
   notify:
   - Start or restart libvirtd
   tags:
