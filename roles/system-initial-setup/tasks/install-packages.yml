@@ -16,6 +16,9 @@
   loop:
   - jq
   - tar
+  - wget
+  - bind-utils
+  - nmstate
   tags:
   - tools
 
@@ -29,10 +32,6 @@
   - virt-install
   - qemu-kvm
   - mkisofs
-  - jq
-  - tar
-  - bind-utils
-  - nmstate
   notify:
   - Start or restart libvirtd
   tags:
