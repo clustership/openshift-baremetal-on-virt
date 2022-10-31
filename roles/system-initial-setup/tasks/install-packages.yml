@@ -32,6 +32,7 @@
   - virt-install
   - qemu-kvm
   - mkisofs
+  - libguestfs-tools
   notify:
   - Start or restart libvirtd
   tags:
