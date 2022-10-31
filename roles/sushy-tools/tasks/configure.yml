@@ -63,3 +63,14 @@
       names: true
   tags:
   - sushy-tools
+
+#
+# Enable systemd
+#
+- name: Enable libvirtd
+  ansible.builtin.systemd:
+    name: container-sushy-emulator
+    enabled: yes
+    masked: no
+  tags:
+  - sushy-tools
