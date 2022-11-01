@@ -16,6 +16,7 @@
   loop:
   - jq
   - tar
+  - wget
   - bind-utils
   - nmstate
   tags:
