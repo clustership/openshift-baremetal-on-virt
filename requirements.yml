@@ -3,3 +3,4 @@ collections:
 - community.general
 - containers.podman
 - community.crypto
+- ansible.utils
