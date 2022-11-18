@@ -1,0 +1,25 @@
+# ---
+# tasks file for baremetalhost generation
+
+- name: Check that required variables are defined
+  ansible.builtin.assert:
+    that:
+    - hostname is defined
+    - bmc_username is defined
+    - bmc_password is defined
+    - bmc_url is defined
+    - boot_mac_address is defined
+
+- name: Set default values
+  set_fact:
+    hardware_profile: "{{ hardware_profile | default('unknow') }}"
+
+- name: Create nmstate config if required
+  set_fact:
+    nmstate: "{{ lookup('template', 'nmstate.j2') }}"
+
+- name: Generate BareMetalHost resources
+  ansible.builtin.template:
+    src: 'baremetalhost.yaml.j2'
+    dest: /tmp/bmh.yaml
+    lstrip_blocks: yes

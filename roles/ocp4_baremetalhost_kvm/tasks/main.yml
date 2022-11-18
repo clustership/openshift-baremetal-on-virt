@@ -1,0 +1,43 @@
+# ---
+# tasks file for kvm_provision
+
+- name: Get VMs list
+  community.libvirt.virt:
+    command: list_vms
+  register: existing_vms
+  changed_when: no
+  become: yes
+
+- name: Get VM {{ vm_name }} info
+  community.libvirt.virt:
+    command: get_xml
+    name: "{{ vm_name }}"
+  register: vm_info
+  changed_when: no
+  become: yes
+
+- name: Get domain uuid
+  xml:
+    xmlstring: "{{ vm_info.get_xml }}"
+    xpath: "/domain/uuid"
+    content: text
+  register: dom_uuid
+
+- name: Get mac address
+  xml:
+    xmlstring: "{{ vm_info.get_xml }}"
+    xpath: '/domain/devices/interface[./source[@network="ovs-network" and @portgroup="baremetal" and @bridge="br-ext"]]/mac/@address'
+    content: text
+  register: mac_address
+
+# - name: Show info
+#   debug:
+#     msg: "{{ vm_info }}"
+
+- name: Show domuuid
+  debug:
+    msg: "{{ dom_uuid.matches[0].uuid }}"
+
+- name: Show Mac Address
+  debug:
+    msg: "{{ mac_address.matches[0].address }}"

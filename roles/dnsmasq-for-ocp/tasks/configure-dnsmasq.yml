@@ -10,17 +10,25 @@
   tags:
   - dnsmasq
 
-- name: Touch config files
+- name: Preserve resolv.conf
   copy:
-    content: ""
-    dest: "{{ item }}"
+    src: /etc/resolv.conf
+    dest: /etc/dnsmasq.resolv.conf
+    force: no
+  tags:
+  - dnsmasq
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
     force: no
     group: root
     owner: root
-    mode: 0644
+    mode: 0755
   loop:
-  - /var/lib/dnsmasq/ocp4.hostsfile
-  - /var/lib/dnsmasq/ocp4.addnhosts
+  - /var/lib/dnsmasq/hostsfile
+  - /var/lib/dnsmasq/addnhosts
   tags:
   - dnsmasq
 
@@ -33,3 +41,13 @@
   loop:
   - dhcp
   - dns
+
+#
+# Use dynamic resolution
+#
+# - name: Use local server as dns resolver
+#   community.general.nmcli:
+#     conn_name: ovs-if-br-ext
+#     dns4:
+#     - 172.16.1.176
+#     state: present

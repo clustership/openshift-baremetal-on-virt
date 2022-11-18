@@ -1,0 +1,32 @@
+#!/usr/bin/env ansible-playbook
+---
+# If you like to play: ./ansible/create.yml --skip-tags public_dns,letsencrypt
+- hosts: all
+  # connection: local
+  # gather_facts true because we need the public ip address
+  gather_facts: false
+  vars:
+    release_url: https://mirror.openshift.com/pub/openshift-v4/amd64/clients/ocp
+    release_version: 4.11.12
+    pull_secret_file: "{{ '~/auto-pull-secret.json' | expanduser }}"
+    ssh_public_key_file: "{{ '~/.ssh/id_rsa.pub' | expanduser }}"
+    cluster_name: hz-02
+    name_server: hz-02.clustership.com
+    domain: clustership.com
+    api_vip: 172.16.1.150
+    ingress_vip: 172.16.1.151
+    external_bridge: br-ext
+    dns:
+    - 172.16.1.176
+    bmc:
+      username: admin
+      password: bobleponge
+    base_addr: 172.16.0.175
+
+  tasks:
+  - name: Check ip address
+    debug:
+      msg: "{{ base_addr | ansible.utils.ipaddr | ipmath(item) }}"
+    loop: "{{ range(1, 3 + 1, 1)|list }}"
+    tags:
+    - always

@@ -1,0 +1,72 @@
+apiVersion: v1
+baseDomain: {{ domain }}
+compute:
+- architecture: amd64
+  hyperthreading: Enabled
+  name: worker
+  platform:
+    baremetal: {}
+  replicas: 0
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  platform:
+    baremetal: {}
+  replicas: 3
+metadata:
+  creationTimestamp: null
+  name: {{ cluster_name }}
+networking:
+  clusterNetwork:
+  - cidr: 10.132.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: {{ machine_network }}
+  networkType: OVNKubernetes
+  serviceNetwork:
+  - {{ service_network }}
+platform:
+  baremetal:
+    apiVIP: {{ api_vip }}
+    ingressVIP: {{ ingress_vip }}
+    libvirtURI: qemu:///system
+    externalBridge: {{ external_bridge }}
+    provisioningNetwork: Disabled
+    hosts:
+    {% for node_name, node in bmh.items() %}
+    - bmc:
+        address: redfish-virtualmedia://{{ bmc.host }}:8000/redfish/v1/Systems/{{ node.uuid }}
+        disableCertificateVerification: true
+        username: "{{ bmc.username }}"
+        password: "{{ bmc.password }}"
+      bootMACAddress: "{{ node.bootMacAddress }}"
+      bootMode: UEFI
+      hardwareProfile: libvirt
+      name: "{{ node_name }}"
+      role: master
+      networkConfig:
+        interfaces:
+        - name: enp1s0
+          type: ethernet
+          state: up
+          ipv4:
+            address:
+            - ip: "{{ base_node_addr | ansible.utils.ipaddr | ipmath(loop.index - 1) }}"
+              prefix-length: 24
+            enabled: true
+        dns-resolver:
+          config:
+            server:
+            {% for resolver in dns %}
+              - {{ resolver }}
+            {% endfor %}
+        routes:
+          config:
+            - destination: 0.0.0.0/0
+              next-hop-address: {{ gateway | ansible.utils.ipaddr }}
+              next-hop-interface: enp1s0
+{% endfor %}
+publish: External
+pullSecret: '{{ pull_secret|string }}'
+sshKey: {{ ssh_public_key }}

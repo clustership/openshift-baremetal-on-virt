@@ -1,0 +1,26 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Add new OpenShift node
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    cluster_name: hubcluster-02
+    pool_dir: "/var/lib/libvirt/images"
+    vm: worker-1
+    vcpus: 4
+    ram_mb: 8192
+    cleanup: no
+    net: ovs-network
+
+  tasks:
+    - name: KVM Provision role
+      include_role:
+        name: ocp4_bm_kvm_provisionining
+      vars:
+        libvirt_pool_dir: "{{ pool_dir }}/{{ cluster_name }}"
+        vm_name: "{{ cluster_name }}-{{ vm }}"
+        vm_vcpus: "{{ vcpus }}"
+        vm_ram_mb: "{{ ram_mb }}"
+        vm_net: "{{ net }}"
+        cleanup_tmp: "{{ cleanup }}"

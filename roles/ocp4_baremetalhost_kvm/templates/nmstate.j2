@@ -1,0 +1,19 @@
+dns-resolver:
+  config:
+    server:
+    - 10.51.0.79
+interfaces:
+- ipv4:
+    address:
+    - ip: {{ ip_address }}
+      prefix-length: 24
+    enabled: true
+  mtu: 1500
+  name: {{ interface }}
+  state: up
+  type: ethernet
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-address: {{ gateway }}
+    next-hop-interface: {{ interface }}

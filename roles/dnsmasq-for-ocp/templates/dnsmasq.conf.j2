@@ -1,12 +1,15 @@
-## dnsmasq conf file created by libvirt
+domain=clustership.com
+resolv-file=/etc/dnsmasq.resolv.conf
 strict-order
-#pid-file=/run/libvirt/network/default.pid
+pid-file=/run/dnsmasq.pid
 except-interface=lo
 bind-dynamic
-interface=baremetal
+interface=br-ext
 #dhcp-range=interfae:baremetal,192.168.111.40,192.168.111.60,255.255.255.0
 #dhcp-no-override
 #dhcp-authoritative
 #dhcp-lease-max=253
-dhcp-hostsfile=/var/lib/dnsmasq/ocp4.hostsfile
-addn-hosts=/var/lib/dnsmasq/ocp4.addnhosts
+# host-record=vodafone-01-master-1.vodafone-01.clustership.com,10.51.0.82
+#address=/apps.vodafone-01.clustership.com/10.51.0.81
+dhcp-hostsfile=/var/lib/dnsmasq/hostsfile
+addn-hosts=/var/lib/dnsmasq/addnhosts

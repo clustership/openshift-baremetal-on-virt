@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+data:
+  password: Ym9ibGVwb25nZQ==
+  username: YWRtaW4=
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: bmc-{{ node_name }}
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    bmac.agent-install.openshift.io/hostname: {{ node_name }}
+    bmac.agent-install.openshift.io/role: {{ node_role | default('master') }}
+    inspect.metal3.io: disabled
+  labels:
+    infraenvs.agent-install.openshift.io: {{ cluster_name }}
+  name: {{ node_name }}
+  namespace: {{ cluster_name }}
+spec:
+  automatedCleaningMode: disabled
+  bmc:
+    address: redfish-virtualmedia://192.168.130.11:8000/redfish/v1/Systems/{{ node_uuid }}
+    credentialsName: bmc-{{ node_name }}
+    disableCertificateVerification: true
+  hardwareProfile: libvirt
+  bootMode: "UEFI"
+  bootMACAddress: "{{ node_boot_mac_address }}"
+  online: true

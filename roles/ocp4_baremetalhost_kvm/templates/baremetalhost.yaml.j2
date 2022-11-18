@@ -1,0 +1,47 @@
+{% if nmstate is defined and nmstate|length -%}
+---
+apiVersion: v1
+data:
+  nmstate: {{ nmstate | b64encode }}
+kind: Secret
+metadata:
+  name: {{ hostname }}-network-config-secret
+  namespace: openshift-machine-api
+{% endif %}
+---
+apiVersion: v1
+data:
+  username: {{ bmc_username }}
+  password: {{ bmc_password }}
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: bmc-{{ hostname }}
+  namespace: openshift-machine-api
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    bmac.agent-install.openshift.io/hostname: {{ hostname }}
+    bmac.agent-install.openshift.io/role: worker
+    # inspect.metal3.io: disabled
+  {% if zone is defined and zone|length -%}
+  labels:
+    topology.kubernetes.io/zone: {{ zone }}
+  {% endif %}
+  name: {{ hostname }}
+  namespace: openshift-machine-api
+spec:
+  automatedCleaningMode: disabled
+  bmc:
+    address: {{ bmc_url }}
+    credentialsName: bmc-{{ hostname }}
+    disableCertificateVerification: true
+  hardwareProfile: {{ hardware_profile }}
+  bootMode: "UEFI"
+  bootMACAddress: "{{ boot_mac_address }}"
+  online: true
+{% if nmstate is defined and nmstate|length -%}
+  preprovisioningNetworkDataName: {{ hostname }}-network-config-secret
+{% endif %}

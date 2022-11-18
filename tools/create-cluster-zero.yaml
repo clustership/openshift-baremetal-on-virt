@@ -1,0 +1,150 @@
+#!/usr/bin/env ansible-playbook
+---
+# If you like to play: ./ansible/create.yml --skip-tags public_dns,letsencrypt
+- hosts: all
+  # connection: local
+  # gather_facts true because we need the public ip address
+  gather_facts: true
+  become: true
+  vars:
+    release_url: https://mirror.openshift.com/pub/openshift-v4/amd64/clients/ocp
+    release_version: 4.11.9
+    pull_secret_file: "{{ '~/auto-pull-secret.json' | expanduser }}"
+    ssh_public_key_file: "{{ '~/.ssh/id_rsa.pub' | expanduser }}"
+    cluster_name: tigera-01
+    name_server: hz-02.clustership.com
+    domain: clustership.com
+    api_vip: 172.16.1.140
+    ingress_vip: 172.16.1.141
+    gateway: 172.16.1.1
+    base_node_addr: 172.16.1.145
+    external_bridge: baremetal
+    # baremetal_network: ovs-network
+    baremetal_network: baremetal
+    network_type: Calico
+    dns:
+    - 172.16.1.176
+    bmc:
+      host: 172.16.1.176
+      username: admin
+      password: bobleponge
+
+  tasks:
+  - name: set default values (use defaults/main.yml in role)
+    set_fact:
+      external_bridge: "{{ external_bridge | default('baremetal') }}"
+      machine_network: "{{ machine_network | default('172.16.1.0/24') }}"
+      service_network: "{{ service_network | default('172.31.0.0/16') }}"
+      pull_secret: "{{ lookup('file', pull_secret_file)|string }}"
+      ssh_public_key: "{{ lookup('file', ssh_public_key_file) }}"
+      network_type: "{{ network_type | default('OVNKubernetes') }}"
+    tags:
+    - always
+
+  # - name: Create virtualized infrastructure
+  #   command: "./setup_ocp_compact_bm_uefi_simple.sh {{ cluster_name }}"
+  #   tags:
+  #   - infrastructure
+
+  # - debug:
+  #     msg: "{{ lookup('env', 'DNSIMPLE_API_TOKEN') }}"
+  #   tags:
+  #   - dns
+
+  # - block:
+  #   - name: Authenticate using email and API token and fetch all domains
+  #     community.general.dnsimple:
+  #       account_email: philippe@dotgee.fr
+  #       account_api_token: "{{ lookup('env', 'DNSIMPLE_API_TOKEN') }}"
+  #     delegate_to: localhost
+
+  #   - name: Register {{ cluster_name }} dns record
+  #     community.general.dnsimple:
+  #       domain: "{{ domain }}"
+  #       record: "{{ cluster_name }}"
+  #       type: NS
+  #       ttl: 180
+  #       value: "{{ name_server }}"
+  #       # account_api_token: "{{ lookup('env', 'DNSIMPLE_API_TOKEN') }}"
+  #       account_email: philippe@dotgee.fr
+  #       account_api_token: "{{ lookup('env', 'DNSIMPLE_API_TOKEN') }}"
+  #     delegate_to: localhost
+  #     register: record
+
+  #  tags:
+  #   - dns
+
+  - name: register dom uuid
+    command: "virsh -q domuuid {{ cluster_name }}-master-{{ item }}"
+    register: uuid
+    loop: "{{ range(1, 3 + 1, 1)|list }}"
+    tags:
+    - infraenv
+
+  - name: register dom bootMacAddress
+    shell: "virsh -q domiflist {{ cluster_name }}-master-{{ item }} | awk '/{{ baremetal_network }}/ {  if (NR == 1) print $5 }'"
+    register: bma
+    loop: "{{ range(1, 3 + 1, 1)|list }}"
+    tags:
+    - infraenv
+
+  - set_fact:
+      bmh: "{{ bmh|default({}) | combine( { '-'.join((cluster_name, 'master', item|string)) : { 'uuid' : uuid.results[item - 1].stdout , 'bootMacAddress' : bma.results[item - 1].stdout } } ) }}"
+    loop: "{{ range(1, 3 + 1, 1)|list }}"
+    tags:
+    - infraenv
+
+  - debug:
+      var=uuid
+    tags:
+    - infraenv
+
+  - debug:
+      var=bma
+    tags:
+    - infraenv
+
+  - debug:
+      msg: "{{ bmh }}"
+    tags:
+    - infraenv
+
+  - name: Create bare metal hosts resources
+    ansible.builtin.template:
+      src: 'templates/install-config.yaml.j2'
+      dest: /tmp/install-config.yaml
+      lstrip_blocks: yes
+    # vars:
+      # node_uuid: "{{ bmh['-'.join((cluster_name, 'master', item|string))].uuid }}"
+      # node_boot_mac_address: "{{ bmh['-'.join((cluster_name, 'master', item|string))].bootMacAddress }}"
+    tags:
+    - infraenv
+
+  - name: Create hostfiles dir
+    file:
+      path: /var/lib/dnsmasq/addnhosts
+      state: directory
+      owner: dnsmasq
+      group: dnsmasq
+      mode: 0755
+    tags:
+    - infraenv
+
+  - name: Create dnsmasq hostfile
+    copy:
+      dest: /var/lib/dnsmasq/addnhosts/{{ cluster_name }}.addnhosts
+      content: ""
+      force: no
+      owner: dnsmasq
+      group: dnsmasq
+      mode: 0644
+    tags:
+    - infraenv 
+   
+  - name: Fill dnsmasq addnhosts
+    ansible.builtin.lineinfile:
+      path: /var/lib/dnsmasq/addnhosts/{{ cluster_name }}.addnhosts
+      line: "{{ base_node_addr | ansible.utils.ipaddr | ipmath(item - 1) }} {{ cluster_name }}-master-{{ item }}.{{ cluster_name }}.{{ domain }}"
+    loop: "{{ range(1, 3 + 1, 1)|list }}"
+    tags:
+    - infraenv 

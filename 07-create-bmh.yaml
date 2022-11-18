@@ -1,0 +1,31 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Create BMH resource for new OpenShift node
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+  vars:
+    cluster_name: hubcluster-02
+    pool_dir: "/var/lib/libvirt/images"
+    vm: worker-1
+    vcpus: 4
+    ram_mb: 8192
+    cleanup: no
+    net: ovs-network
+
+  tasks:
+    - name: KVM Provision role
+      include_role:
+        name: ocp4_baremetalhost_kvm
+        tasks_from: generate_bmh.yaml
+      vars:
+        bmc_username: root
+        bmc_password: calvin
+        bmc_url: redfish-virtualmedia://10.10.10.10/redfish/v1/Systems
+        boot_mac_address: ff:ff:ff:ff:ff:ff
+        hostname: "{{ cluster_name }}-{{ vm }}"
+        vm_net: "{{ net }}"
+        ip_address: 10.51.0.25
+        gateway: 10.51.0.1
+        interface: enp1s0
+        hardware_profile: libvirt
